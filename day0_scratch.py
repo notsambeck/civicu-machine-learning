@@ -12,12 +12,14 @@ df = pd.read_csv('lessons/shared-resources/heights_weights_genders.csv')
 
 # gender masks, male=1
 df = df.sort_values('Height')
+df['log_height'] = pd.np.log(df.Height)
 female = df['Gender'] == 'Female'
 male = df['Gender'] == 'Male'
 df.Gender = male.astype(int)  # set male to 1, female to 0
-X = df.Height.values.reshape(-1, 1)
+X = df[['Height', 'log_height']].values.reshape(-1, 2)
 
-X_m = df[male].Height.values.reshape(-1, 1)  # len of array x 1 (vs. list)
+X_m = df[male][['Height', 'log_height']].values.reshape(-1, 2)
+# len of array x 1 (vs. list)
 y_m = df[male].Weight
 df['predicted_weight_as_f'] = 0
 df['predicted_weight_as_m'] = 0
@@ -27,7 +29,8 @@ lr_m.fit(X_m, y_m)
 df.predicted_weight_as_m = lr_m.predict(X)
 
 
-X_f = df[female].Height.values.reshape(-1, 1)  # len of array x 1 (vs. list)
+X_f = df[female][['Height', 'log_height']].values.reshape(-1, 2)
+# len of array x 1 (vs. list)
 y_f = df[female].Weight
 
 lr_f = LinearRegression()
@@ -94,18 +97,13 @@ def pred_weight_dumb(height, gender):
     else:
         return lr_f.predict(height)
 
-predict_weight = LinearRegression().fit(df[['Height', 'Gender']]
-                                        .values.reshape(-1, 2),
+predict_weight = LinearRegression().fit(df[['Height', 'Gender', 'log_height']]
+                                        .values.reshape(-1, 3),
                                         df.Weight)
 
-print(pred_weight_dumb(70, 'Male'))
-print(predict_weight.predict(pd.np.array([70, 1]).reshape(1, -1)))
-print(pred_weight_dumb(70, 'Female'))
-print(predict_weight.predict(pd.np.array([70, 0]).reshape(1, -1)))
 
-
-df['e_mlvr'] = predict_weight.predict(df[['Height', 'Gender']]
-                                      .values.reshape(-1, 2)) - df.Weight
+df['e_mlvr'] = predict_weight.predict(df[['Height', 'Gender', 'log_height']]
+                                      .values.reshape(-1, 3)) - df.Weight
 e_rms = ((df.e_mlvr ** 2).mean()) ** .5
 print('rms error: {}'.format(e_rms))
 
