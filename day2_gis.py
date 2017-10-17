@@ -2,21 +2,25 @@ import pandas as pd
 import re
 import requests
 import time
+import matplotlib.pyplot as plt  # noqa
 
 df = pd.read_csv('lessons/shared-resources/crimedata.csv', index_col='id')
+del(df['Unnamed: 0'])
 
 # del(df['Unnamed: 0'])
 
-print(df.head())
+# print(df.head())
 
-h = '3025+NE+Hoyt+St.,+Portland,+OR'
+h = '3376+NE+Hoyt+St.,+Portland,+OR'
+
 
 def geocode_osm(address, polygon=0):
     polygon = int(polygon)
-    address = address.replace(' ', '+').replace('\r\n',',').replace('\r',',').replace('\n',',')
+    address = address.replace(' ', '+').replace('\r\n', ',')\
+        .replace('\r', ',').replace('\n', ',')
     osm_url = 'http://nominatim.openstreetmap.org/search'
-    osm_url += '?q={address}&format=json&polygon={polygon}&addressdetails={addressdetails}'.format(
-        address=address, polygon=polygon, addressdetails=0)
+    osm_url += '?q={}&format=json&polygon={}&addressdetails={}'.format(
+        address, polygon, 0)
 
     print(osm_url)
     resp = requests.get(osm_url)
@@ -32,9 +36,9 @@ def geocode_osm(address, polygon=0):
 
 def geocode_google(address, apikey='AIzaSyAyUtgR634vpwNkpfewBY0nVcWiWqgs3-Y'):
     # https://developers.google.com/maps/documentation/embed/get-api-key
-    url = 'https://maps.googleapis.com/maps/api/geocode/json?address={}&key={}'.format(address, apikey)
-    print(url)
-    resp = requests.get(url)
+    u = 'https://maps.googleapis.com/maps/api/geocode/json?address={}&key={}'\
+        .format(address, apikey)
+    resp = requests.get(u)
     results = resp.json()
     results = results.get('results', {})
     results = [{}] if not len(results) else results
@@ -72,19 +76,44 @@ def get_first_ten_coords():
         time.sleep(1)
     return out
 
+
 '''
 from sklearn.sometihng import LabelEncoder
 # label encoder - good for ordinals; not good for neighborhoods
 le = LabelEncoder()
 le.fit(df.neighborhood)
 df['neighborhood_int'] = le.transform(df.neighborhood)
-'''
 
 neighborhood = pd.get_dummies(df.neighborhood)
 neighborhood.head(3)
+'''
 
+crime = pd.get_dummies(df.major_offense_type).astype(int)
 # select burglaries
-crime = pd.get_dummies(df.neighborhood)
-bulgraries = df.df['major_offense_type'] == 'Burglary'
+# bulgraries = df[df['major_offense_type'] == 'Burglary']
 # or alternatively
-df[crime.Burlglary.astype(bool)]
+# df[crime.Burglary.astype(bool)]
+
+
+df['hour'] = df.report_time.apply(lambda x: int(x.split(':')[0]))
+df['day'] = df.report_date.apply(lambda x: int(x.split('-')[-1]))
+
+df['distance'] = (df.xcoordinate**2 + df.ycoordinate ** 2) ** .5
+
+df.xcoordinate.fillna(df.xcoordinate.min(), inplace=True)
+df.ycoordinate.fillna(df.ycoordinate.min(), inplace=True)
+
+df.distance = df.distance - df.distance.median()
+
+# extended dataframe
+edf = pd.concat([df, crime])
+
+
+def plot_days(days=30):
+    for day in range(1, days+1):
+        mask = edf.day == day
+        edf[mask].plot.scatter(x='xcoordinate', y='ycoordinate',
+                               s=1, alpha=.02)
+
+
+plot_days(5)
