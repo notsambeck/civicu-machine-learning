@@ -1,4 +1,6 @@
 import pandas as pd
+import tqdm
+import os
 
 
 def loadLines(fileName, fields):
@@ -63,5 +65,28 @@ MOVIE_CONVERSATIONS_FIELDS = ["character1ID", "character2ID",
                               "movieID", "utteranceIDs"]
 
 
-lines = loadLines("movie_lines.txt", MOVIE_LINES_FIELDS)
-conversations = loadConversations(os.path.join("movie_conversations.txt"), lines, MOVIE_CONVERSATIONS_FIELDS)
+def make_lines_df(lim=-1):
+    lines_obj = loadLines("movie_lines.txt", MOVIE_LINES_FIELDS)
+    conversations = loadConversations(os.path.join("movie_conversations.txt"),
+                                      lines_obj, MOVIE_CONVERSATIONS_FIELDS)
+
+    if lim != -1:
+        assert lim <= len(conversations)
+
+    df = pd.DataFrame(columns=['x', 'y'])
+
+    def frmt(dct):
+        return dct['text'].strip('\n').lower()
+
+    ind = 0
+
+    for conv in tqdm.tqdm(conversations[:lim]):
+        lines = conv['lines']
+        cur = frmt(lines[0])
+        for i in range(len(lines) - 1):
+            nxt = frmt(lines[i+1])
+            df.loc[ind] = [cur, nxt]
+            cur = nxt
+            ind += 1
+
+    return df
