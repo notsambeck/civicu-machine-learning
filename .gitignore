@@ -42,8 +42,3 @@ cover/*
 MANIFEST
 
 .ipynb_checkpoints
-
-*.mm
-*.mm.index
-*.txt
-
